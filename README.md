@@ -9,7 +9,7 @@ Generador de remisiones (notas de despacho) listo para desplegar en Vercel. Sin 
 | Función | Detalle |
 |---|---|
 | **Configuración inicial** | Datos de la empresa (nombre, NIT, dirección, contacto, logo), prefijo y consecutivo automático, IVA, moneda, términos al pie, plantillas de correo y WhatsApp. |
-| **Nueva remisión** | Número automático, fecha, cliente (con autocompletado de clientes anteriores), datos de entrega, ítems con totales en vivo y vista previa idéntica a la impresión. |
+| **Nueva remisión** | Número automático, fecha, cliente con su **orden de compra** (y autocompletado de clientes anteriores), datos de entrega, ítems con totales en vivo y vista previa idéntica a la impresión. |
 | **Imprimir** | Solo imprime el documento (formato A4). |
 | **Descargar** | PDF (jsPDF), Excel `.xlsx` (SheetJS) y XML. |
 | **Enviar por correo** | Con `RESEND_API_KEY` configurada en Vercel envía desde el servidor con el PDF adjunto; sin ella descarga el PDF y abre el cliente de correo con el mensaje listo. |

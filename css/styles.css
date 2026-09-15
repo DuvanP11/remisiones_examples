@@ -95,6 +95,7 @@ code { background: #eef2ff; padding: 1px 5px; border-radius: 4px; font-size: 12p
 .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .card-head h3 { margin: 0; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.span-2 { grid-column: 1 / -1; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 14px; }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 500; }
 label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 13px; margin: 6px 0; cursor: pointer; }
@@ -203,6 +204,7 @@ th.num, td.num { text-align: right; }
   .config-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
+  .span-2 { grid-column: auto; }
   .app { flex-direction: column; }
   .sidebar { width: 100%; flex: none; height: auto; position: static; padding: 12px; }
   .nav { flex-direction: row; flex-wrap: wrap; }

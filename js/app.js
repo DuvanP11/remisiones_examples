@@ -43,8 +43,8 @@
   function nuevaRemision() {
     return {
       id: uid(), numero: Storage.nextNumber(config), fecha: hoy(), fechaEntrega: '', estado: 'borrador',
-      cliente: { nombre: '', documento: '', direccion: '', ciudad: '', telefono: '', email: '' },
-      entrega: { direccion: '', ciudad: '', transportador: '', placa: '', ordenCompra: '', guia: '' },
+      cliente: { nombre: '', documento: '', direccion: '', ciudad: '', telefono: '', email: '', ordenCompra: '' },
+      entrega: { direccion: '', ciudad: '', transportador: '', placa: '', guia: '' },
       items: [itemVacio()],
       observaciones: '', aplicaIva: !!config.remision.aplicaIva,
       creadoEn: new Date().toISOString(), actualizadoEn: null, enviadoA: []
@@ -55,6 +55,8 @@
   function cargar(rem, nueva) {
     current = JSON.parse(JSON.stringify(rem));
     if (!current.items || !current.items.length) current.items = [itemVacio()];
+    // Compatibilidad: la orden de compra vivía en "entrega" en versiones anteriores
+    if (!current.cliente.ordenCompra && current.entrega?.ordenCompra) { current.cliente.ordenCompra = current.entrega.ordenCompra; delete current.entrega.ordenCompra; }
     esNueva = !!nueva;
     fillForm();
     renderItems();
@@ -100,7 +102,7 @@
   // Autocompletar cliente conocido
   $('[data-bind="cliente.nombre"]').addEventListener('change', e => {
     const c = Storage.clientesConocidos().find(x => x.nombre === e.target.value);
-    if (c) { current.cliente = { ...current.cliente, ...c, nombre: c.nombre }; fillForm(); renderPreview(); }
+    if (c) { current.cliente = { ...current.cliente, ...c, nombre: c.nombre, ordenCompra: current.cliente.ordenCompra }; fillForm(); renderPreview(); }
   });
 
   // ---- Ítems
@@ -184,11 +186,12 @@
           <div class="doc-num-value">${esc(current.numero)}</div>
           <div class="doc-num-meta"><span>Fecha</span><b>${Exporter.fmtDate(current.fecha)}</b></div>
           <div class="doc-num-meta"><span>Entrega</span><b>${Exporter.fmtDate(current.fechaEntrega) || '—'}</b></div>
+          ${c.ordenCompra ? `<div class="doc-num-meta"><span>O. compra</span><b>${esc(c.ordenCompra)}</b></div>` : ''}
         </div>
       </header>
       <section class="doc-grid">
-        <div class="doc-box"><h3>Cliente</h3><dl>${dl([['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', [c.direccion, c.ciudad].filter(Boolean).join(', ')], ['Teléfono', c.telefono], ['Correo', c.email]]) || '<dd style="color:#9ca3af">Sin datos</dd>'}</dl></div>
-        <div class="doc-box"><h3>Entrega</h3><dl>${dl([['Dirección', [e.direccion, e.ciudad].filter(Boolean).join(', ')], ['Transportador', e.transportador], ['Placa', e.placa], ['Orden de compra', e.ordenCompra], ['Guía / Ref.', e.guia]]) || '<dd style="color:#9ca3af">Sin datos</dd>'}</dl></div>
+        <div class="doc-box"><h3>Cliente</h3><dl>${dl([['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', [c.direccion, c.ciudad].filter(Boolean).join(', ')], ['Teléfono', c.telefono], ['Correo', c.email], ['Orden de compra', c.ordenCompra]]) || '<dd style="color:#9ca3af">Sin datos</dd>'}</dl></div>
+        <div class="doc-box"><h3>Entrega</h3><dl>${dl([['Dirección', [e.direccion, e.ciudad].filter(Boolean).join(', ')], ['Transportador', e.transportador], ['Placa', e.placa], ['Guía / Ref.', e.guia]]) || '<dd style="color:#9ca3af">Sin datos</dd>'}</dl></div>
       </section>
       <table class="doc-items">
         <thead><tr><th class="center">#</th><th>Código</th><th>Descripción</th><th class="num">Cant.</th><th class="center">Unidad</th>${precios ? '<th class="num">Vr. unitario</th><th class="num">Total</th>' : ''}</tr></thead>
@@ -353,7 +356,7 @@
     const mon = config.remision.moneda;
     let list = Storage.getAll();
     if (est) list = list.filter(r => r.estado === est);
-    if (q) list = list.filter(r => [r.numero, r.cliente?.nombre, r.cliente?.documento, r.cliente?.ciudad, r.entrega?.ciudad, r.entrega?.ordenCompra].join(' ').toLowerCase().includes(q));
+    if (q) list = list.filter(r => [r.numero, r.cliente?.nombre, r.cliente?.documento, r.cliente?.ordenCompra, r.cliente?.ciudad, r.entrega?.ciudad].join(' ').toLowerCase().includes(q));
     const tb = $('#hist-body');
     tb.innerHTML = list.map(r => {
       const t = Exporter.calcTotals(r, config);
@@ -363,6 +366,7 @@
         <td><b>${esc(r.numero)}</b></td>
         <td>${Exporter.fmtDate(r.fecha)}</td>
         <td>${esc(r.cliente?.nombre)}<br><span class="muted">${esc(r.cliente?.documento)}</span></td>
+        <td>${esc(r.cliente?.ordenCompra) || '<span class="muted">—</span>'}</td>
         <td>${esc(r.entrega?.ciudad || r.cliente?.ciudad)}</td>
         <td class="num">${t.items.length}</td>
         <td class="num">${config.remision.mostrarPrecios === false ? '—' : Exporter.fmtMoney(t.total, mon)}</td>
@@ -478,8 +482,8 @@
   function remisionDemo() {
     const r = nuevaRemision();
     r.fechaEntrega = r.fecha;
-    r.cliente = { nombre: 'Comercializadora El Roble S.A.S.', documento: '901.234.567-8', direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', telefono: '300 123 4567', email: 'compras@elroble.com' };
-    r.entrega = { direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', transportador: 'Carlos Pérez', placa: 'ABC-123', ordenCompra: 'OC-2026-0458', guia: '' };
+    r.cliente = { nombre: 'Comercializadora El Roble S.A.S.', documento: '901.234.567-8', direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', telefono: '300 123 4567', email: 'compras@elroble.com', ordenCompra: 'OC-2026-0458' };
+    r.entrega = { direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', transportador: 'Carlos Pérez', placa: 'ABC-123', guia: '' };
     r.items = [
       { codigo: 'PRD-001', descripcion: 'Caja de tornillos hexagonales 1/4" x 100 und', cantidad: 12, unidad: 'CAJA', precio: 38500 },
       { codigo: 'PRD-014', descripcion: 'Lámina galvanizada calibre 20 (1.20 x 2.40 m)', cantidad: 8, unidad: 'UND', precio: 96000 },
@@ -492,16 +496,16 @@
     if (localStorage.getItem('remisiones.demo') || Storage.getAll().length) return;
     const base = new Date();
     const ejemplos = [
-      { d: 12, cliente: { nombre: 'Ferretería La Central', documento: '800.555.111-2', direccion: 'Calle 10 # 5 - 20', ciudad: 'Cali', telefono: '315 555 0101', email: 'pedidos@lacentral.co' },
-        entrega: { direccion: 'Calle 10 # 5 - 20', ciudad: 'Cali', transportador: 'Envía', placa: '', ordenCompra: 'OC-1001', guia: 'EN-77812' },
+      { d: 12, cliente: { nombre: 'Ferretería La Central', documento: '800.555.111-2', direccion: 'Calle 10 # 5 - 20', ciudad: 'Cali', telefono: '315 555 0101', email: 'pedidos@lacentral.co', ordenCompra: 'OC-1001' },
+        entrega: { direccion: 'Calle 10 # 5 - 20', ciudad: 'Cali', transportador: 'Envía', placa: '', guia: 'EN-77812' },
         items: [{ codigo: 'PRD-001', descripcion: 'Caja de tornillos hexagonales 1/4" x 100 und', cantidad: 20, unidad: 'CAJA', precio: 38500 }, { codigo: 'PRD-007', descripcion: 'Broca para concreto 3/8"', cantidad: 30, unidad: 'UND', precio: 8900 }],
         estado: 'enviada', enviadoA: [{ medio: 'correo', para: 'pedidos@lacentral.co' }] },
-      { d: 6, cliente: { nombre: 'Constructora Andina Ltda.', documento: '860.222.333-4', direccion: 'Av. Boyacá # 80 - 15', ciudad: 'Bogotá D.C.', telefono: '310 200 3040', email: 'obra@andina.com' },
-        entrega: { direccion: 'Obra Torres del Parque, Calle 170 # 8 - 90', ciudad: 'Bogotá D.C.', transportador: 'Luis Gómez', placa: 'XYZ-789', ordenCompra: 'OC-1017', guia: '' },
+      { d: 6, cliente: { nombre: 'Constructora Andina Ltda.', documento: '860.222.333-4', direccion: 'Av. Boyacá # 80 - 15', ciudad: 'Bogotá D.C.', telefono: '310 200 3040', email: 'obra@andina.com', ordenCompra: 'OC-1017' },
+        entrega: { direccion: 'Obra Torres del Parque, Calle 170 # 8 - 90', ciudad: 'Bogotá D.C.', transportador: 'Luis Gómez', placa: 'XYZ-789', guia: '' },
         items: [{ codigo: 'PRD-014', descripcion: 'Lámina galvanizada calibre 20 (1.20 x 2.40 m)', cantidad: 25, unidad: 'UND', precio: 96000 }, { codigo: 'PRD-032', descripcion: 'Pintura anticorrosiva gris', cantidad: 10, unidad: 'GALÓN', precio: 72000 }, { codigo: 'PRD-040', descripcion: 'Soldadura 6013 x 1/8"', cantidad: 15, unidad: 'KG', precio: 14500 }],
         estado: 'enviada', enviadoA: [{ medio: 'whatsapp', para: '+573102003040' }] },
-      { d: 1, cliente: { nombre: 'Comercializadora El Roble S.A.S.', documento: '901.234.567-8', direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', telefono: '300 123 4567', email: 'compras@elroble.com' },
-        entrega: { direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', transportador: 'Carlos Pérez', placa: 'ABC-123', ordenCompra: 'OC-1025', guia: '' },
+      { d: 1, cliente: { nombre: 'Comercializadora El Roble S.A.S.', documento: '901.234.567-8', direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', telefono: '300 123 4567', email: 'compras@elroble.com', ordenCompra: 'OC-1025' },
+        entrega: { direccion: 'Cra 45 # 12 - 80, Bodega 3', ciudad: 'Medellín', transportador: 'Carlos Pérez', placa: 'ABC-123', guia: '' },
         items: [{ codigo: 'PRD-021', descripcion: 'Cemento gris 50 kg', cantidad: 40, unidad: 'BULTO', precio: 31000 }],
         estado: 'guardada', enviadoA: [] }
     ];

@@ -80,6 +80,7 @@
               <label>Ciudad <input type="text" data-bind="cliente.ciudad"></label>
               <label>Teléfono <input type="tel" data-bind="cliente.telefono"></label>
               <label>Correo <input type="email" data-bind="cliente.email" placeholder="compras@cliente.com"></label>
+              <label class="span-2">Orden de compra del cliente <input type="text" data-bind="cliente.ordenCompra" placeholder="Número de la OC / pedido con que el cliente solicitó la mercancía"></label>
             </div>
             <datalist id="lista-clientes"></datalist>
           </div>
@@ -91,7 +92,6 @@
               <label>Ciudad <input type="text" data-bind="entrega.ciudad"></label>
               <label>Transportador / Conductor <input type="text" data-bind="entrega.transportador"></label>
               <label>Placa <input type="text" data-bind="entrega.placa"></label>
-              <label>Orden de compra <input type="text" data-bind="entrega.ordenCompra"></label>
               <label>Guía / Referencia <input type="text" data-bind="entrega.guia"></label>
             </div>
           </div>
@@ -153,7 +153,7 @@
       </div>
       <div class="card">
         <div class="filters">
-          <input type="search" id="hist-buscar" placeholder="Buscar por número, cliente, NIT, ciudad…">
+          <input type="search" id="hist-buscar" placeholder="Buscar por número, cliente, NIT, orden de compra, ciudad…">
           <select id="hist-estado">
             <option value="">Todos los estados</option>
             <option value="guardada">Guardadas</option>
@@ -165,7 +165,7 @@
           <table class="hist-table">
             <thead>
               <tr>
-                <th>Número</th><th>Fecha</th><th>Cliente</th><th>Ciudad</th>
+                <th>Número</th><th>Fecha</th><th>Cliente</th><th>O. compra</th><th>Ciudad</th>
                 <th class="num">Ítems</th><th class="num">Total</th><th>Estado</th><th>Acciones</th>
               </tr>
             </thead>

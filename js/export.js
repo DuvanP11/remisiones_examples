@@ -79,8 +79,9 @@ const Exporter = (() => {
     for (const l of lineasEmp) { doc.text(l, x, ye, { maxWidth: 105 }); ye += 4; }
 
     // Caja número
-    const bw = 62, bx = W - M - bw;
-    doc.setDrawColor(...DARK).setLineWidth(0.4).roundedRect(bx, y, bw, 24, 1.5, 1.5);
+    const c = rem.cliente || {}, e = rem.entrega || {};
+    const bw = 62, bx = W - M - bw, bh = c.ordenCompra ? 28.5 : 24;
+    doc.setDrawColor(...DARK).setLineWidth(0.4).roundedRect(bx, y, bw, bh, 1.5, 1.5);
     doc.setFontSize(8).setTextColor(...GRAY).text('REMISIÓN', bx + bw - 3, y + 5, { align: 'right' });
     doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(...DARK).text(rem.numero || '', bx + bw - 3, y + 11, { align: 'right' });
     doc.setFont('helvetica', 'normal').setFontSize(8.5);
@@ -88,16 +89,19 @@ const Exporter = (() => {
     doc.setTextColor(...DARK).text(fmtDate(rem.fecha), bx + bw - 3, y + 16.5, { align: 'right' });
     doc.setTextColor(...GRAY).text('Entrega', bx + 3, y + 21);
     doc.setTextColor(...DARK).text(fmtDate(rem.fechaEntrega) || '—', bx + bw - 3, y + 21, { align: 'right' });
+    if (c.ordenCompra) {
+      doc.setTextColor(...GRAY).text('O. compra', bx + 3, y + 25.5);
+      doc.setTextColor(...DARK).text(String(c.ordenCompra), bx + bw - 3, y + 25.5, { align: 'right', maxWidth: bw - 22 });
+    }
 
-    y = Math.max(ye, y + 24) + 3;
+    y = Math.max(ye, y + bh) + 3;
     doc.setDrawColor(...DARK).setLineWidth(0.6).line(M, y, W - M, y);
     y += 5;
 
     // Cajas cliente / entrega
-    const c = rem.cliente || {}, e = rem.entrega || {};
     const boxes = [
-      ['CLIENTE', [['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', [c.direccion, c.ciudad].filter(Boolean).join(', ')], ['Teléfono', c.telefono], ['Correo', c.email]]],
-      ['ENTREGA', [['Dirección', [e.direccion, e.ciudad].filter(Boolean).join(', ')], ['Transportador', e.transportador], ['Placa', e.placa], ['Orden de compra', e.ordenCompra], ['Guía / Ref.', e.guia]]]
+      ['CLIENTE', [['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', [c.direccion, c.ciudad].filter(Boolean).join(', ')], ['Teléfono', c.telefono], ['Correo', c.email], ['Orden de compra', c.ordenCompra]]],
+      ['ENTREGA', [['Dirección', [e.direccion, e.ciudad].filter(Boolean).join(', ')], ['Transportador', e.transportador], ['Placa', e.placa], ['Guía / Ref.', e.guia]]]
     ];
     const bwid = (CW - 4) / 2;
     let maxH = 0;
@@ -212,9 +216,9 @@ const Exporter = (() => {
       [],
       ['REMISIÓN', rem.numero], ['Fecha', fmtDate(rem.fecha)], ['Fecha de entrega', fmtDate(rem.fechaEntrega)], ['Estado', rem.estado || ''],
       [],
-      ['CLIENTE'], ['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', c.direccion], ['Ciudad', c.ciudad], ['Teléfono', c.telefono], ['Correo', c.email],
+      ['CLIENTE'], ['Nombre', c.nombre], ['NIT / CC', c.documento], ['Dirección', c.direccion], ['Ciudad', c.ciudad], ['Teléfono', c.telefono], ['Correo', c.email], ['Orden de compra', c.ordenCompra],
       [],
-      ['ENTREGA'], ['Dirección', e.direccion], ['Ciudad', e.ciudad], ['Transportador', e.transportador], ['Placa', e.placa], ['Orden de compra', e.ordenCompra], ['Guía / Ref.', e.guia],
+      ['ENTREGA'], ['Dirección', e.direccion], ['Ciudad', e.ciudad], ['Transportador', e.transportador], ['Placa', e.placa], ['Guía / Ref.', e.guia],
       [],
       precios ? ['#', 'Código', 'Descripción', 'Cantidad', 'Unidad', `Vr. unitario (${mon})`, `Total (${mon})`] : ['#', 'Código', 'Descripción', 'Cantidad', 'Unidad']
     ];
@@ -236,16 +240,16 @@ const Exporter = (() => {
   }
   function toExcelAll(list, cfg) {
     const mon = cfg.remision.moneda;
-    const resumen = [['Número', 'Fecha', 'Fecha entrega', 'Cliente', 'NIT / CC', 'Ciudad', 'Correo', 'Ítems', `Subtotal (${mon})`, `IVA (${mon})`, `Total (${mon})`, 'Estado', 'Enviada a', 'Creada']];
+    const resumen = [['Número', 'Fecha', 'Fecha entrega', 'Cliente', 'NIT / CC', 'Orden de compra', 'Ciudad', 'Correo', 'Ítems', `Subtotal (${mon})`, `IVA (${mon})`, `Total (${mon})`, 'Estado', 'Enviada a', 'Creada']];
     const detalle = [['Número', 'Fecha', 'Cliente', '#', 'Código', 'Descripción', 'Cantidad', 'Unidad', `Vr. unitario (${mon})`, `Total (${mon})`]];
     for (const r of list) {
       const t = calcTotals(r, cfg);
-      resumen.push([r.numero, fmtDate(r.fecha), fmtDate(r.fechaEntrega), r.cliente?.nombre || '', r.cliente?.documento || '', r.cliente?.ciudad || '', r.cliente?.email || '',
+      resumen.push([r.numero, fmtDate(r.fecha), fmtDate(r.fechaEntrega), r.cliente?.nombre || '', r.cliente?.documento || '', r.cliente?.ordenCompra || '', r.cliente?.ciudad || '', r.cliente?.email || '',
         t.items.length, t.subtotal, t.iva, t.total, r.estado || '', (r.enviadoA || []).map(x => x.para).join(', '), (r.creadoEn || '').slice(0, 10)]);
       t.items.forEach((it, i) => detalle.push([r.numero, fmtDate(r.fecha), r.cliente?.nombre || '', i + 1, it.codigo || '', it.descripcion || '', num(it.cantidad), it.unidad || '', num(it.precio), it.total]));
     }
     const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.aoa_to_sheet(resumen); ws1['!cols'] = [12, 11, 12, 30, 16, 14, 26, 6, 14, 12, 14, 10, 30, 11].map(w => ({ wch: w }));
+    const ws1 = XLSX.utils.aoa_to_sheet(resumen); ws1['!cols'] = [12, 11, 12, 30, 16, 16, 14, 26, 6, 14, 12, 14, 10, 30, 11].map(w => ({ wch: w }));
     const ws2 = XLSX.utils.aoa_to_sheet(detalle); ws2['!cols'] = [12, 11, 30, 4, 14, 44, 10, 8, 14, 14].map(w => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, ws1, 'Remisiones');
     XLSX.utils.book_append_sheet(wb, ws2, 'Detalle');
@@ -260,8 +264,8 @@ const Exporter = (() => {
     let x = '<?xml version="1.0" encoding="UTF-8"?>\n';
     x += `<remision numero="${xmlEsc(rem.numero)}" fecha="${xmlEsc(rem.fecha)}" fechaEntrega="${xmlEsc(rem.fechaEntrega)}" estado="${xmlEsc(rem.estado || '')}">\n`;
     x += '  <emisor>\n' + tag('nombre', emp.nombre) + tag('nit', emp.nit) + tag('direccion', emp.direccion) + tag('ciudad', emp.ciudad) + tag('telefono', emp.telefono) + tag('email', emp.email) + '  </emisor>\n';
-    x += '  <cliente>\n' + tag('nombre', c.nombre) + tag('documento', c.documento) + tag('direccion', c.direccion) + tag('ciudad', c.ciudad) + tag('telefono', c.telefono) + tag('email', c.email) + '  </cliente>\n';
-    x += '  <entrega>\n' + tag('direccion', e.direccion) + tag('ciudad', e.ciudad) + tag('transportador', e.transportador) + tag('placa', e.placa) + tag('ordenCompra', e.ordenCompra) + tag('guia', e.guia) + '  </entrega>\n';
+    x += '  <cliente>\n' + tag('nombre', c.nombre) + tag('documento', c.documento) + tag('direccion', c.direccion) + tag('ciudad', c.ciudad) + tag('telefono', c.telefono) + tag('email', c.email) + tag('ordenCompra', c.ordenCompra) + '  </cliente>\n';
+    x += '  <entrega>\n' + tag('direccion', e.direccion) + tag('ciudad', e.ciudad) + tag('transportador', e.transportador) + tag('placa', e.placa) + tag('guia', e.guia) + '  </entrega>\n';
     x += '  <items>\n';
     t.items.forEach((it, i) => {
       x += `    <item numero="${i + 1}">\n` + tag('codigo', it.codigo, '      ') + tag('descripcion', it.descripcion, '      ') + tag('cantidad', num(it.cantidad), '      ') +

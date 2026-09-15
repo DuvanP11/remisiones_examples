@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remisiones</title>
+  <meta name="description" content="Generador de remisiones: crea, imprime, exporta (PDF, Excel, XML) y envía remisiones por correo.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-icon">📦</span>
+      <div>
+        <div class="brand-name">Remisiones</div>
+        <div class="brand-sub" id="brand-empresa">Mi empresa</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="nueva">📝 Nueva remisión</button>
+      <button class="nav-btn" data-view="historial">🗂️ Historial <span class="badge" id="badge-historial">0</span></button>
+      <button class="nav-btn" data-view="config">⚙️ Configuración</button>
+    </nav>
+    <div class="sidebar-foot">
+      <span id="email-status" class="pill pill-muted" title="Estado del envío de correo">Correo: verificando…</span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ NUEVA / EDITAR REMISIÓN ============ -->
+    <section id="view-nueva" class="view">
+      <div id="banner-config" class="banner hidden">
+        <strong>Primer paso:</strong> edita los datos de tu empresa (nombre, NIT, logo, consecutivo, términos).
+        Mientras tanto la remisión usa datos de ejemplo.
+        <button class="btn btn-sm btn-primary" data-view="config">Ir a configuración</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-title">
+          <h2 id="editor-title">Nueva remisión</h2>
+          <span id="editor-estado" class="pill pill-muted">Sin guardar</span>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn btn-primary" id="btn-guardar" title="Ctrl+S">💾 Guardar</button>
+          <button class="btn" id="btn-nueva">➕ Nueva</button>
+          <span class="sep"></span>
+          <button class="btn" id="btn-imprimir">🖨️ Imprimir</button>
+          <button class="btn" id="btn-pdf">📄 PDF</button>
+          <button class="btn" id="btn-excel">📊 Excel</button>
+          <button class="btn" id="btn-xml">🧾 XML</button>
+          <span class="sep"></span>
+          <button class="btn btn-accent" id="btn-email">✉️ Enviar por correo</button>
+          <button class="btn btn-wa" id="btn-whatsapp">📲 WhatsApp</button>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <div class="editor">
+          <div class="card">
+            <h3>Datos de la remisión</h3>
+            <div class="grid-3">
+              <label>Número <input type="text" data-bind="numero"></label>
+              <label>Fecha <input type="date" data-bind="fecha"></label>
+              <label>Fecha de entrega <input type="date" data-bind="fechaEntrega"></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Cliente</h3>
+            <div class="grid-2">
+              <label>Nombre / Razón social * <input type="text" data-bind="cliente.nombre" list="lista-clientes" placeholder="Cliente S.A.S."></label>
+              <label>NIT / CC <input type="text" data-bind="cliente.documento" placeholder="900.000.000-1"></label>
+              <label>Dirección <input type="text" data-bind="cliente.direccion"></label>
+              <label>Ciudad <input type="text" data-bind="cliente.ciudad"></label>
+              <label>Teléfono <input type="tel" data-bind="cliente.telefono"></label>
+              <label>Correo <input type="email" data-bind="cliente.email" placeholder="compras@cliente.com"></label>
+            </div>
+            <datalist id="lista-clientes"></datalist>
+          </div>
+
+          <div class="card">
+            <h3>Entrega</h3>
+            <div class="grid-2">
+              <label>Dirección de entrega <input type="text" data-bind="entrega.direccion"></label>
+              <label>Ciudad <input type="text" data-bind="entrega.ciudad"></label>
+              <label>Transportador / Conductor <input type="text" data-bind="entrega.transportador"></label>
+              <label>Placa <input type="text" data-bind="entrega.placa"></label>
+              <label>Orden de compra <input type="text" data-bind="entrega.ordenCompra"></label>
+              <label>Guía / Referencia <input type="text" data-bind="entrega.guia"></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Ítems</h3>
+              <button class="btn btn-sm" id="btn-add-item">➕ Agregar ítem</button>
+            </div>
+            <div class="table-wrap">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th style="width:16%">Código</th>
+                    <th>Descripción *</th>
+                    <th style="width:11%">Cant.</th>
+                    <th style="width:11%">Unidad</th>
+                    <th style="width:17%" class="col-precio">Vr. unitario</th>
+                    <th style="width:14%" class="col-precio">Total</th>
+                    <th style="width:36px"></th>
+                  </tr>
+                </thead>
+                <tbody id="items-body"></tbody>
+              </table>
+            </div>
+            <div class="totals-edit">
+              <label class="check"><input type="checkbox" data-bind="aplicaIva"> Aplicar IVA (<span id="iva-pct">19</span>%)</label>
+              <div class="totals-box">
+                <div><span>Subtotal</span><b id="t-subtotal">$ 0</b></div>
+                <div><span>IVA</span><b id="t-iva">$ 0</b></div>
+                <div class="total"><span>Total</span><b id="t-total">$ 0</b></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Observaciones</h3>
+            <textarea rows="3" data-bind="observaciones" placeholder="Instrucciones de entrega, horario, contacto en sitio…"></textarea>
+          </div>
+        </div>
+
+        <div class="preview">
+          <div class="preview-label">Vista previa (así se imprime y se exporta a PDF)</div>
+          <div id="doc" class="doc"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HISTORIAL ============ -->
+    <section id="view-historial" class="view hidden">
+      <div class="toolbar">
+        <div class="toolbar-title"><h2>Historial de remisiones</h2></div>
+        <div class="toolbar-actions">
+          <button class="btn" id="btn-hist-excel">📊 Exportar todo a Excel</button>
+          <button class="btn" id="btn-backup">⬇️ Respaldo JSON</button>
+          <button class="btn" id="btn-restore">⬆️ Importar JSON</button>
+          <input type="file" id="file-restore" accept="application/json" hidden>
+        </div>
+      </div>
+      <div class="card">
+        <div class="filters">
+          <input type="search" id="hist-buscar" placeholder="Buscar por número, cliente, NIT, ciudad…">
+          <select id="hist-estado">
+            <option value="">Todos los estados</option>
+            <option value="guardada">Guardadas</option>
+            <option value="enviada">Enviadas</option>
+          </select>
+          <span class="muted" id="hist-resumen"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th>Número</th><th>Fecha</th><th>Cliente</th><th>Ciudad</th>
+                <th class="num">Ítems</th><th class="num">Total</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="hist-body"></tbody>
+          </table>
+        </div>
+        <div id="hist-vacio" class="empty hidden">
+          Aún no hay remisiones guardadas. Crea la primera desde <b>Nueva remisión</b>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONFIGURACIÓN ============ -->
+    <section id="view-config" class="view hidden">
+      <div class="toolbar">
+        <div class="toolbar-title"><h2>Configuración</h2></div>
+        <div class="toolbar-actions">
+          <button class="btn btn-primary" id="btn-cfg-guardar">💾 Guardar configuración</button>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <div class="card">
+          <h3>Datos de la empresa (emisor)</h3>
+          <p class="muted">Aparecen en el encabezado de todas las remisiones.</p>
+          <div class="grid-2">
+            <label>Nombre / Razón social * <input type="text" data-cfg="empresa.nombre"></label>
+            <label>NIT <input type="text" data-cfg="empresa.nit"></label>
+            <label>Dirección <input type="text" data-cfg="empresa.direccion"></label>
+            <label>Ciudad <input type="text" data-cfg="empresa.ciudad"></label>
+            <label>Teléfono <input type="tel" data-cfg="empresa.telefono"></label>
+            <label>Correo <input type="email" data-cfg="empresa.email"></label>
+            <label>Sitio web <input type="text" data-cfg="empresa.web"></label>
+            <label>Responsable de despacho <input type="text" data-cfg="empresa.responsable" placeholder="Quien firma 'Entregado por'"></label>
+          </div>
+          <div class="logo-row">
+            <div class="logo-box"><img id="cfg-logo-preview" alt="Logo"><span id="cfg-logo-empty">Sin logo</span></div>
+            <div>
+              <label class="btn btn-sm">🖼️ Subir logo <input type="file" id="cfg-logo" accept="image/*" hidden></label>
+              <button class="btn btn-sm" id="cfg-logo-quitar">Quitar</button>
+              <p class="muted">PNG o JPG. Se reduce automáticamente.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Numeración y valores</h3>
+          <div class="grid-2">
+            <label>Prefijo <input type="text" data-cfg="remision.prefijo" placeholder="REM"></label>
+            <label>Próximo consecutivo <input type="number" min="1" data-cfg="remision.consecutivo"></label>
+            <label>IVA (%) <input type="number" min="0" max="100" step="0.1" data-cfg="remision.iva"></label>
+            <label>Moneda <select data-cfg="remision.moneda">
+              <option value="COP">COP – Peso colombiano</option>
+              <option value="USD">USD – Dólar</option>
+              <option value="MXN">MXN – Peso mexicano</option>
+              <option value="EUR">EUR – Euro</option>
+              <option value="PEN">PEN – Sol</option>
+            </select></label>
+          </div>
+          <label class="check"><input type="checkbox" data-cfg="remision.aplicaIva"> Aplicar IVA por defecto en remisiones nuevas</label>
+          <label class="check"><input type="checkbox" data-cfg="remision.mostrarPrecios"> Mostrar precios y totales en el documento</label>
+          <label>Términos / notas al pie
+            <textarea rows="4" data-cfg="remision.notas"></textarea>
+          </label>
+        </div>
+
+        <div class="card">
+          <h3>Plantilla de correo</h3>
+          <p class="muted">Variables: <code>{{numero}}</code>, <code>{{cliente}}</code>, <code>{{empresa}}</code>, <code>{{fecha}}</code>, <code>{{total}}</code></p>
+          <label>Asunto <input type="text" data-cfg="correo.asunto"></label>
+          <label>Mensaje <textarea rows="6" data-cfg="correo.mensaje"></textarea></label>
+          <label>Copia (CC) por defecto <input type="text" data-cfg="correo.cc" placeholder="despachos@miempresa.com"></label>
+          <div id="cfg-email-info" class="note"></div>
+        </div>
+
+        <div class="card">
+          <h3>Plantilla de WhatsApp</h3>
+          <p class="muted">Se abre WhatsApp con el mensaje listo y el teléfono del cliente. Mismas variables que el correo.</p>
+          <div class="grid-2">
+            <label>Código de país por defecto <input type="text" data-cfg="whatsapp.codigoPais" placeholder="57"></label>
+          </div>
+          <label>Mensaje <textarea rows="5" data-cfg="whatsapp.mensaje"></textarea></label>
+        </div>
+
+        <div class="card">
+          <h3>Datos</h3>
+          <p class="muted">La información se guarda en este navegador. Usa el respaldo JSON del historial para moverla a otro equipo.</p>
+          <button class="btn btn-sm" id="btn-cfg-demo">Cargar remisión de ejemplo</button>
+          <button class="btn btn-sm btn-danger" id="btn-cfg-reset">Borrar todo (configuración e historial)</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ MODAL CORREO ============ -->
+<div id="modal-email" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Enviar remisión por correo</h3>
+      <button class="btn-icon" data-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Para * <input type="email" id="em-para" placeholder="cliente@correo.com"></label>
+      <label>CC <input type="text" id="em-cc" placeholder="opcional, separados por coma"></label>
+      <label>Asunto <input type="text" id="em-asunto"></label>
+      <label>Mensaje <textarea rows="6" id="em-mensaje"></textarea></label>
+      <label class="check"><input type="checkbox" id="em-adjuntar" checked> Adjuntar PDF de la remisión</label>
+      <div id="em-nota" class="note"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn btn-accent" id="em-enviar">✉️ Enviar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/storage.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
